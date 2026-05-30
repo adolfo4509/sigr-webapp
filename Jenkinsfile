@@ -34,7 +34,8 @@ pipeline {
 
         stage('Test') {
             steps {
-                bat 'npm test --if-present'
+                // Run tests with coverage so Sonar can pick up coverage report
+                bat 'npm run test:coverage --if-present'
             }
         }
 
@@ -44,19 +45,17 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-             steps {
-                withSonarQubeEnv('sonarqube-local') {
-            bat """
-                sonar-scanner ^
-                -Dsonar.projectKey=SGPR-RESTAURANTE ^
-                -Dsonar.sources=src ^
-                -Dsonar.host.url=http://localhost:9000 ^
-                -Dsonar.login=%SONAR_AUTH_TOKEN%
-            """
-                 }
-            }
-        }
+        node {
+  stage('SCM') {
+    checkout scm
+  }
+  stage('SonarQube Analysis') {
+    def scannerHome = tool 'SonarScanner';
+    withSonarQubeEnv() {
+      sh "${scannerHome}/bin/sonar-scanner"
+    }
+  }
+}
 
         stage('Quality Gate') {
         steps {
